@@ -1,16 +1,20 @@
 {
-  "name": "courier-browser",
+  "name": "elm-vite",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "NODE_ENV=production && vite build",
+    "dev": "vite --port 3000",
+    "docs": "elm-doc-preview",
+    "lint": "elm-review",
     "preview": "vite preview",
     "test": "elm-test"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.8",
+    "elm-doc-preview": "^5.0.5",
+    "elm-review": "^2.9.2",
     "elm-test": "^0.19.1-revision9",
     "postcss": "^8.4.16",
     "tailwindcss": "^3.1.8",

@@ -1,0 +1,9 @@
+{
+  "name": "elm/vite",
+  "summary": "Example vite app",
+  "version": "1.0.0",
+  "exposed-modules": [
+    "Route",
+    "Session"
+  ]
+}

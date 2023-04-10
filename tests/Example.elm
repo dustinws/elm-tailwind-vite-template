@@ -1,8 +1,7 @@
-module Example exposing (..)
+module Example exposing (suite)
 
-import Expect exposing (Expectation)
-import Fuzz exposing (string)
-import Test exposing (..)
+import Expect
+import Test exposing (Test, describe, test)
 
 
 suite : Test
@@ -13,6 +12,7 @@ suite =
             [ test "has no effect on a palindrome" <|
                 \_ ->
                     let
+                        palindrome : String
                         palindrome =
                             "hannah"
                     in
@@ -24,13 +24,5 @@ suite =
                     "ABCDEFG"
                         |> String.reverse
                         |> Expect.equal "GFEDCBA"
-
-            -- fuzz runs the test 100 times with randomly-generated inputs!
-            , fuzz string "restores the original string if you run it again" <|
-                \randomlyGeneratedString ->
-                    randomlyGeneratedString
-                        |> String.reverse
-                        |> String.reverse
-                        |> Expect.equal randomlyGeneratedString
             ]
         ]

@@ -1,10 +1,14 @@
-module Main exposing (main)
+module Main exposing (Model, Msg, main)
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (Html, a, div, text)
-import Html.Attributes exposing (class, href)
+import Html
+import Page.Landing
+import Page.NotFound
+import Page.Redirect
+import Page.Todo
 import Route
+import Session
 import Url
 
 
@@ -28,19 +32,37 @@ main =
 ---- MODEL ----
 
 
-type alias Model =
-    { navKey : Nav.Key
-    , route : Route.Route
-    }
+type Model
+    = Redirect Session.Session
+    | NotFound Session.Session
+    | Landing Session.Session
+    | Todo Page.Todo.Model
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ url navKey =
-    ( { navKey = navKey
-      , route = Route.fromUrl url
-      }
-    , Cmd.none
-    )
+    changeRouteTo url (Redirect (Session.guest navKey))
+
+
+toSession : Model -> Session.Session
+toSession model =
+    case model of
+        Redirect session ->
+            session
+
+        NotFound session ->
+            session
+
+        Landing session ->
+            session
+
+        Todo subModel ->
+            Page.Todo.toSession subModel
+
+
+toNavKey : Model -> Nav.Key
+toNavKey =
+    toSession >> Session.toNavKey
 
 
 
@@ -50,19 +72,54 @@ init _ url navKey =
 type Msg
     = ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
+    | TodoMsg Page.Todo.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        ChangedUrl url ->
-            ( { model | route = Route.fromUrl url }, Cmd.none )
+    case ( model, msg ) of
+        ( _, ChangedUrl url ) ->
+            changeRouteTo url model
 
-        ClickedLink (Browser.Internal url) ->
-            ( model, Nav.pushUrl model.navKey (Url.toString url) )
+        ( _, ClickedLink (Browser.Internal url) ) ->
+            ( model
+            , Nav.pushUrl
+                (toNavKey model)
+                (Url.toString url)
+            )
 
-        ClickedLink (Browser.External href) ->
+        ( _, ClickedLink (Browser.External href) ) ->
             ( model, Nav.load href )
+
+        ( Todo subModel, TodoMsg subMsg ) ->
+            Page.Todo.update subMsg subModel
+                |> updateWith Todo TodoMsg
+
+        _ ->
+            ( model, Cmd.none )
+
+
+changeRouteTo : Url.Url -> Model -> ( Model, Cmd Msg )
+changeRouteTo url model =
+    case Route.fromUrl url of
+        Route.NotFound ->
+            ( NotFound (toSession model), Cmd.none )
+
+        Route.Landing ->
+            ( Landing (toSession model), Cmd.none )
+
+        Route.Todos ->
+            Page.Todo.init (toSession model)
+                |> updateWith Todo TodoMsg
+
+
+updateWith :
+    (model -> Model)
+    -> (msg -> Msg)
+    -> ( model, Cmd msg )
+    -> ( Model, Cmd Msg )
+updateWith toModel toMsg ( model, cmd ) =
+    ( toModel model, Cmd.map toMsg cmd )
 
 
 
@@ -71,56 +128,23 @@ update msg model =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Cadence"
-    , body =
-        [ renderLayout
-            [ renderNavLinks
-            , div
-                [ class "m-96"
-                , class "text-4xl"
-                ]
-                [ renderPage model.route
-                ]
-            ]
-        ]
+    case model of
+        Redirect _ ->
+            Page.Redirect.view
+
+        NotFound _ ->
+            Page.NotFound.view
+
+        Landing _ ->
+            Page.Landing.view
+
+        Todo subModel ->
+            Page.Todo.view subModel
+                |> viewWith TodoMsg
+
+
+viewWith : (msg -> Msg) -> Browser.Document msg -> Browser.Document Msg
+viewWith toMsg { title, body } =
+    { title = title
+    , body = List.map (Html.map toMsg) body
     }
-
-
-renderLayout : List (Html Msg) -> Html Msg
-renderLayout =
-    div
-        [ class "flex"
-        , class "flex-col"
-        , class "h-screen"
-        , class "items-center"
-        ]
-
-
-renderNavLinks : Html Msg
-renderNavLinks =
-    div
-        [ class "flex"
-        , class "m-4"
-        , class "space-x-16"
-        , class "text-2xl"
-        ]
-        [ a [ href "/", class "hover:text-slate-400" ] [ text "Landing" ]
-        , a [ href "/about", class "hover:text-slate-400" ] [ text "About" ]
-        , a [ href "/contact", class "hover:text-slate-400" ] [ text "Contact" ]
-        ]
-
-
-renderPage : Route.Route -> Html Msg
-renderPage route =
-    case route of
-        Route.Landing ->
-            text "Landing Page"
-
-        Route.About ->
-            text "About Page"
-
-        Route.Contact ->
-            text "Contact Page"
-
-        Route.NotFound ->
-            text "404 Not Found Page"
