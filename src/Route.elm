@@ -31,7 +31,6 @@ import Url.Parser as Parser exposing (Parser)
 type Route
     = NotFound
     | Landing
-    | Todos
 
 
 
@@ -54,5 +53,4 @@ parser : Parser (Route -> a) a
 parser =
     Parser.oneOf
         [ Parser.map Landing Parser.top
-        , Parser.map Todos (Parser.s "todos")
         ]
